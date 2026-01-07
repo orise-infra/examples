@@ -1,12 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: flux-nginx
+namespace: nginx-flux-example
 
-# Add version annotation to all resources
-commonAnnotations:
-  app.kubernetes.io/version: "v0.0.2"
+# Add version label to all resources
+labels:
+  - pairs:
+      app.kubernetes.io/version: "v0.0.3"
 
 resources:
-  - namespace.yaml
   - deployment.yaml
   - service.yaml
