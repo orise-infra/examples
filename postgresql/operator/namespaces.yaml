@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres-operator-system
+  # The 'infra' tenant indicates this namespace is managed by the platform team.
+  # It hosts the controller/operator software.
+  labels:
+    toolkit.fluxcd.io/tenant: infra
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres-db
+  # The 'app' tenant indicates this namespace belongs to an application team.
+  # It hosts the actual database workloads.
+  labels:
+    toolkit.fluxcd.io/tenant: app

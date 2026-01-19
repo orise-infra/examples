@@ -1,0 +1,23 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: postgres-operator
+  namespace: postgres-operator-system
+spec:
+  interval: 1h0m0s
+  chart:
+    spec:
+      chart: postgres-operator
+      version: "1.15.1" # Updated to a known recent version
+      sourceRef:
+        kind: HelmRepository
+        name: postgres-operator
+        namespace: postgres-operator-system
+  values:
+    # Custom configuration for the operator
+    configGeneral:
+      # We tell the operator to watch the 'postgres-db' namespace for CRs
+      watched_namespaces:
+        - postgres-db
+    # Enable the UI for easier visualization (optional but helpful)
+    enableJsonLogging: true

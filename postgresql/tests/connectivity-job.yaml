@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-connectivity-check
+  namespace: postgres-db
+  annotations:
+    "helm.sh/hook": test
+spec:
+  template:
+    spec:
+      containers:
+        - name: check-replica
+          image: postgres:15-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for replica service..."
+              until pg_isready -h acid-minimal-cluster-repl -U app-user; do sleep 2; done
+              echo "Connecting to replica..."
+              psql -h acid-minimal-cluster-repl -U app-user -d app_db -c "SELECT 1;"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-user.acid-minimal-cluster.credentials.postgresql.acid.zalan.do
+                  key: password
+            - name: PGSSLMODE
+              value: require
+      restartPolicy: Never
