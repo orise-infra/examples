@@ -1,0 +1,25 @@
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: acid-minimal-cluster
+spec:
+  teamId: "acid"
+  volume:
+    size: 1Gi
+  numberOfInstances: 2
+  # Explicitly define the image
+  dockerImage: "registry.opensource.zalan.do/acid/spilo-15:3.0-p1"
+  users:
+    zalando:  # Superuser (auto-managed)
+    - superuser
+    - createdb
+    app-user: # Our custom user (managed by us/SOPS)
+    - createdb
+  databases:
+    foo: zalando  # dbname: owner
+    app_db: app-user
+  postgresql:
+    version: "15"
+    parameters:
+      max_connections: "100"
+      shared_buffers: "32MB"
