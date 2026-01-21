@@ -1,0 +1,41 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: openobserve
+  namespace: openobserve
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: openobserve-standalone
+      version: "0.16.0"
+      sourceRef:
+        kind: HelmRepository
+        name: openobserve
+        namespace: openobserve
+  values:
+    image:
+      repository: public.ecr.aws/zinclabs/openobserve
+      tag: "v0.50.1"
+    config:
+      ZO_DATA_DIR: /data
+    auth:
+      existingRootUserSecret:
+        name: openobserve-auth
+        emailKey: ZO_ROOT_USER_EMAIL
+        passwordKey: ZO_ROOT_USER_PASSWORD
+    # Explicitly inject environment variables because chart v0.16.0 does not automatically handle existingRootUserSecret
+    extraEnv:
+      - name: ZO_ROOT_USER_EMAIL
+        valueFrom:
+          secretKeyRef:
+            name: openobserve-auth
+            key: ZO_ROOT_USER_EMAIL
+      - name: ZO_ROOT_USER_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: openobserve-auth
+            key: ZO_ROOT_USER_PASSWORD
+    persistence:
+      enabled: true
+      size: 10Gi
