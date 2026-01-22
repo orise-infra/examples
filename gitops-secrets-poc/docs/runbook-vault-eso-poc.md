@@ -1,4 +1,4 @@
-# Runbook — Vault + External Secrets Operator (PoC)
+# Runbook - Vault + External Secrets Operator (PoC)
 
 ## Purpose
 

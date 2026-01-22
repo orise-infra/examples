@@ -41,7 +41,7 @@ This file contains:
 
 The [deployment.yaml](../clusters/dev-cluster/apps/sample-app/deployment.yaml) consumes the secret in two ways:
 
-**1. Environment variable** — `customer-name` is injected as `CUSTOMER_NAME`:
+**1. Environment variable** - `customer-name` is injected as `CUSTOMER_NAME`:
 
 ```yaml
 env:
@@ -52,7 +52,7 @@ env:
         key: customer-name
 ```
 
-**2. Volume mount** — `api-token` is mounted as a file:
+**2. Volume mount** - `api-token` is mounted as a file:
 
 ```yaml
 volumes:
