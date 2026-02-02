@@ -4,7 +4,10 @@ This example demonstrates how to deploy OpenObserve using Flux CD with a fully i
 
 ## Prerequisites
 
-*   Kubernetes Cluster with **Flux CD** installed.
+*   Kubernetes Cluster with **Flux CD v2.0+** installed.
+*   **Flux CLI** installed locally
+
+See the [Flux Getting Started runbook](https://orise-infra.github.io/infra-portal/docs/runbooks/flux-getting-started.html) for Flux setup instructions.
 
 ## Deployment Strategy
 
@@ -15,34 +18,44 @@ This example uses a **Tenant** deployment model rather than `flux bootstrap`:
 
 ## Quick Start
 
-**All commands must be executed from the `openobserve/` directory.**
+### 1. Create GitRepository Source
+
+Use the Flux CLI to create a source pointing to the examples repository:
 
 ```bash
-cd openobserve
+flux create source git openobserve-example \
+  --url=https://github.com/orise-infra/examples \
+  --branch=main \
+  --interval=1m \
+  --namespace=openobserve
 ```
 
-### 1. Bootstrap Namespace
-Create the namespace first. This allows the Flux resources to be fully contained within the tenant namespace.
+For more details on Git sources, see the [Flux documentation](https://fluxcd.io/docs/cmd/flux_create_source_git/).
+
+### 2. Deploy with Flux Kustomization
+
+Create a Kustomization resource to deploy OpenObserve:
 
 ```bash
-kubectl apply -f namespace.yaml
-```
-
-### 2. Deploy via Flux
-Apply the Flux delivery manifest to the `openobserve` namespace.
-
-```bash
-kubectl apply -f flux-delivery.yaml -n openobserve
+flux create kustomization openobserve \
+  --source=GitRepository/openobserve-example.openobserve \
+  --path=./openobserve \
+  --prune=true \
+  --wait=true \
+  --namespace=openobserve
 ```
 
 ### 3. Verify Deployment
-Check the Flux reconciliation status and OpenObserve deployment.
+
+Check the Flux reconciliation status and OpenObserve deployment:
 
 ```bash
 flux get kustomization openobserve -n openobserve
 flux get helmrelease -n openobserve
 kubectl get pods -n openobserve
 ```
+
+For more monitoring and troubleshooting, see the [Flux Production Operations runbook](https://orise-infra.github.io/infra-portal/docs/runbooks/flux-production-operations.html).
 
 ### 4. Get Ingestion Credentials
 For this example, we use the root user credentials for ingestion.
@@ -74,7 +87,18 @@ If successful, you should receive a response like:
 
 ## Cleanup
 
+Remove the OpenObserve example using Flux:
+
 ```bash
-kubectl delete -f flux-delivery.yaml -n openobserve
-kubectl delete -f namespace.yaml
+flux delete kustomization openobserve --namespace=openobserve
+flux delete source git openobserve-example --namespace=openobserve
 ```
+
+To delete the namespace and all remaining resources:
+
+```bash
+kubectl delete namespace openobserve
+```
+
+For more details on Flux delete operations, see the [Flux documentation](https://fluxcd.io/docs/cmd/flux_delete/).
+

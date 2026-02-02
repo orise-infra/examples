@@ -1,40 +1,74 @@
 # ORISE Infrastructure Examples
 
-Kubernetes configuration examples for deploying services with Flux.
+Reference Kubernetes configurations for deploying services with Flux CD, aligned with the [Orise Infrastructure Architecture](https://orise-infra.github.io/infra-docs/10-architecture/architecture-overview.html).
+
+## Architecture Patterns
+
+These examples demonstrate specific deployment patterns defined in the [Deployment Workflows](https://orise-infra.github.io/infra-docs/10-architecture/deployment-workflows.html). They serve as reference implementations for Product Services (Layer 3) consuming Platform Services (Layer 2).
+
+| Service         | Pattern             | Description                                                                                                                                                     |
+|:----------------|:--------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **PostgreSQL**  | **Stateful (CNPG)** | Demonstrates managing stateful workloads using the CloudNativePG operator. Shows dependency management (Operator → Cluster) and storage integration (Longhorn). |
+| **NGINX**       | **Stateless (Web)** | Demonstrates a simple stateless web server deployment using standard Kubernetes manifests and Kustomize.                                                        |
+| **Traefik**     | **Ingress (OSS)**   | Demonstrates standard Ingress Controller deployment using Traefik v3 OSS Helm charts. Includes profiles for both High Availability and Edge scenarios.          |
+| **OpenObserve** | **Helm Delivery**   | Demonstrates deploying third-party applications via Helm Charts wrapped in Flux `HelmRelease`. Shows namespace isolation and secret management.                 |
+
+### Key Principles implied in examples:
+1.  **Tenant Model**: Each example is self-contained in a namespace, assuming a pre-existing platform (Layer 1 & 2).
+2.  **GitOps-First**: No manual changes; all state is declarative.
+3.  **Portability**: Configurations are designed to work across Edge and Cloud models with minimal overlays.
 
 ## Usage
 
-These examples are designed to be deployed using Flux GitOps. Flux will automatically apply and reconcile these Kustomize configurations from your Git repository.
+These examples are designed to be deployed using **Flux CD**, following the standard [Deployment Workflows](https://orise-infra.github.io/infra-docs/10-architecture/deployment-workflows.html).
 
-### Manual Testing
+### Prerequisites
 
-To test configurations locally before committing:
+- **Kubernetes cluster** (Edge or Cloud)
+- **Flux CD v2.0+** installed
+- **Flux CLI** installed locally
+
+For operational guides and setup instructions, refer to the [Service Runbooks](https://orise-infra.github.io/infra-portal/docs/runbooks/). specifically the [Flux Getting Started guide](https://orise-infra.github.io/infra-portal/docs/runbooks/flux-getting-started.html).
+
+### Deploy a Service
+
+Refer to the specific example's README for deployment instructions:
+
+- **PostgreSQL**: See `postgres/README.md` for CloudNativePG deployment
+- **OpenObserve**: See `openobserve/README.md` for observability stack deployment
+- **NGINX**: See `nginx/README.md` for Ingress Controller deployment
+
+### Local Testing
+
+To validate configurations locally before deploying:
 
 ```bash
-kubectl apply -k <folder-name>/
+# Preview what Kustomize will generate
+kubectl kustomize <folder-name>/
+
+# For Flux validation (requires Flux CLI)
+flux build kustomization --path <folder-name>/
 ```
 
-## Create Git Bundle
+## Air-Gapped / Edge Workflow
 
-To create a git bundle of the current branch (HEAD):
+For disconnected environments (StratumOS), use Git Bundles as defined in the [Edge Deployment Workflow](https://orise-infra.github.io/infra-docs/10-architecture/deployment-workflows.html#edge-deployment-workflow).
+
+### Create Git Bundle
+
+To create a bundle for transport:
 
 ```bash
 git bundle create examples-head.bundle HEAD
 ```
 
-To bundle all branches and tags:
+### Verify Git Bundle
+
+To verify a bundle before transport:
 
 ```bash
-git bundle create examples-all.bundle --all
+git bundle verify examples-head.bundle
 ```
 
-## Verify Git Bundle
-
-To verify a git bundle is valid:
-
-```bash
-git bundle verify examples-all.bundle
-```
-
-This checks that the bundle is complete and can be used to clone or fetch from.
+This bundle can then be transported to the edge device and consumed by `bundlectl` or Flux.
 
