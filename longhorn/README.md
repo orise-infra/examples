@@ -1,64 +1,66 @@
-# Longhorn Distributed Storage
+# Longhorn Distributed Storage Example (Flux)
 
-This example demonstrates deploying **Longhorn** as the storage engine for the Kubernetes cluster using Flux CD.
+## Table of Contents
 
-## Components
+1.  [Overview](#overview)
+2.  [Prerequisites](#prerequisites)
+3.  [Quick Start](#quick-start)
+4.  [Cleanup](#cleanup)
 
-*   **HelmRepository**: Registers the official Longhorn chart repository.
-*   **HelmRelease**: Deploys Longhorn v1.6.x to the `longhorn-system` namespace.
-*   **StorageClasses**: Defines custom storage profiles:
-    *   `longhorn-ha`: 3 replicas (High Availability) - Recommended for Private Cloud.
-    *   `longhorn-edge`: 1 replica (Single Node) - Optimized for Edge (if local-path is not sufficient).
+## Overview
+
+Deploys **Longhorn** as the storage engine using Flux CD.
 
 ## Prerequisites
 
-*   **ISCSSI**: The nodes must have `open-iscsi` installed (or equivalent for your OS).
-*   **Flux CD**: Installed on the cluster.
+*   Kubernetes Cluster with **Flux CD v2.0+** installed.
+*   **ISCSSI**: Nodes must have `open-iscsi` installed.
 
-## Deployment
+## Quick Start
 
-### 1. Create GitRepository Source
+> **Warning**: This is a **development example** for testing. 
+> For production, Flux resources should be created in the `flux-system` namespace.
+
+### 1. Configure Environment
 
 ```bash
-flux create source git longhorn-example \
-  --url=https://github.com/orise-infra/examples \
-  --branch=main \
-  --interval=1m \
-  --namespace=flux-system
+export GIT_REPO_URL="https://github.com/orise-infra/examples"
+export GIT_BRANCH="main"
+export NAMESPACE="longhorn-system"
 ```
 
-### 2. Deploy with Flux Kustomization
-
-This creates the `longhorn` Kustomization, which the PostgreSQL example depends on.
+### 2. Create Namespace & Deploy
 
 ```bash
+kubectl create namespace $NAMESPACE
+
+flux create source git longhorn-example \
+  --url=$GIT_REPO_URL \
+  --branch=$GIT_BRANCH \
+  --interval=1m \
+  --namespace=$NAMESPACE
+
 flux create kustomization longhorn \
-  --source=GitRepository/longhorn-example.flux-system \
+  --source=GitRepository/longhorn-example \
   --path=./longhorn \
   --prune=true \
   --wait=true \
+  --interval=10m \
   --health-check-timeout=10m \
-  --namespace=flux-system
+  --namespace=$NAMESPACE
 ```
 
-## Verification
-
-Check if the Longhorn pods are running:
+### 3. Verify
 
 ```bash
-kubectl get pods -n longhorn-system
-```
-
-Check if the StorageClasses are created:
-
-```bash
+kubectl get pods -n $NAMESPACE
 kubectl get sc
 ```
 
-Access the Longhorn UI (port-forward):
+## Cleanup
 
 ```bash
-kubectl port-forward svc/longhorn-frontend -n longhorn-system 8080:80
-# Open http://localhost:8080 in your browser
+flux delete kustomization longhorn --namespace=$NAMESPACE
+flux delete source git longhorn-example --namespace=$NAMESPACE
+kubectl delete namespace $NAMESPACE
 ```
-
