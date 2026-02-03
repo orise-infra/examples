@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: edge-db
+spec:
+  serviceName: "edge-db"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edge-db
+  template:
+    metadata:
+      labels:
+        app: edge-db
+    spec:
+      securityContext:
+        # Ensures the postgres user (UID 999) has permissions to the volume
+        fsGroup: 999
+      containers:
+      - name: postgres
+        # OPTIMIZATION: Use Alpine build for minimal footprint on resource-constrained Edge devices.
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: PGDATA
+          value: /data/db/postgres
+        envFrom:
+        - secretRef:
+            name: edge-db-secret
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U app-user
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - pg_isready -U app-user
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: data
+          # NOTE: PGDATA is set to a subdirectory of this mount to avoid 
+          # conflicts with the volume's root directory (e.g., lost+found).
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      # STORAGE: Use 'standard' (local-path provisioner) to consume disk directly on the node.
+      # Avoids the overhead of a distributed storage engine (like Longhorn) for single-node deployments.
+      storageClassName: "standard"
+      resources:
+        requests:
+          storage: 10Gi
