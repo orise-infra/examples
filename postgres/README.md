@@ -25,7 +25,6 @@ This example demonstrates two architectural patterns for deploying PostgreSQL:
 ## Quick Start
 
 > **Warning**: This is a **development example** for testing. 
-> For production, Flux resources should be created in the `flux-system` namespace, and proper GitOps workflows with branch protection must be used.
 
 ### 1. Configure Environment
 
