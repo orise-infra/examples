@@ -1,0 +1,22 @@
+# This manifest defines the High-Availability PostgreSQL Cluster.
+# It is a Custom Resource consumed by the CloudNativePG (CNPG) Operator.
+#
+# Key Features:
+# - HA: 3 instances (1 Primary, 2 Replicas) with auto-failover.
+# - Storage: Uses 'longhorn-ha' for replicated volume safety.
+# - WAL: Separate Write-Ahead-Log volume for performance and reliability.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: prod-db
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  storage:
+    size: 20Gi
+    storageClass: longhorn-ha
+  walStorage:
+    size: 5Gi
+    storageClass: longhorn-ha
+  monitoring:
+    enablePodMonitor: true

@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: postgres-private-cloud
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/instance: prod-db
+      app.kubernetes.io/component: database
+      app.kubernetes.io/part-of: orise-infra
+      orise.io/deployment-model: private-cloud
+
+resources:
+  # For testing we keep the namespace manually, on production the repo is only one not for branch.
+  #- namespace.yaml
+  # BUNDLED OPERATOR:
+  # For the Private Cloud profile, we bundle the CNPG operator and its repository.
+  # This ensures the specific version required for our HA strategy is present,
+  # even if the underlying platform doesn't provide a shared DB operator.
+  - repository.yaml
+  - operator.yaml
+  - cluster.yaml
