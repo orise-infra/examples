@@ -19,7 +19,6 @@ Deploys **Longhorn** as the storage engine using Flux CD.
 ## Quick Start
 
 > **Warning**: This is a **development example** for testing. 
-> For production, Flux resources should be created in the `flux-system` namespace.
 
 ### 1. Configure Environment
 
