@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nginx-private-cloud
+
+resources:
+  - ../base
+  - ingress.yaml
+  # For testing we keep the namespace manually, on production the repo is only one not for branch.
+  #- namespace.yaml
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: nginx-index
+    patch: |-
+      - op: replace
+        path: /data/index.html
+        value: |
+          <!DOCTYPE html>
+          <html>
+          <head><title>Private Cloud Nginx</title></head>
+          <body>
+          <h1>Welcome to ORISE Private Cloud Nginx</h1>
+          <p>Running in High Availability mode.</p>
+          </body>
+          </html>
+  - target:
+      kind: Deployment
+      name: nginx
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3

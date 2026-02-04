@@ -2,228 +2,85 @@
 
 ## Project Overview
 - Kubernetes configuration examples for deploying services with Flux GitOps.
-- Contains Kustomize overlays and Flux Helm Release configurations for multiple platform services.
+- Contains Kustomize overlays and Flux Helm Release configurations.
 - Designed for multi-environment deployment: air-gapped-edge, on-premises-edge, private-cloud, public-cloud.
 - All changes via pull requests, reviewed, and merged to `main`.
 
 ## Repository Structure
 
-```
-examples/
-├── nginx/                          # Nginx ingress example
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   └── kustomization.yaml
-├── openobserve/                    # OpenObserve observability stack
-│   ├── namespace.yaml
-│   ├── source.yaml                 # Flux HelmRepository source
-│   ├── release.yaml                # Flux HelmRelease
-│   ├── secret.yaml                 # Sealed secrets or encrypted credentials
-│   ├── flux-delivery.yaml          # Flux delivery pipeline config
-│   └── kustomization.yaml
-├── postgresql/                     # PostgreSQL Operator + Instance
-│   ├── namespace/                  # Namespace setup
-│   ├── operator/                   # PostgreSQL Operator deployment
-│   ├── instance/                   # PostgreSQL cluster instance
-│   ├── resources/                  # Supporting resources
-│   ├── tests/                      # Connectivity and smoke tests
-│   ├── age.agekey                  # Age encryption key (DO NOT COMMIT)
-│   └── kustomization.yaml
-└── README.md
-```
+The repository supports two structural patterns for examples:
+
+### 1. Simple Structure (e.g., `openobserve`, `longhorn`)
+Used for services with a single deployment configuration.
+- **`<service-name>/`**
+  - **`source.yaml`**: Flux HelmRepository or GitRepository.
+  - **`release.yaml`**: Flux HelmRelease.
+  - **`kustomization.yaml`**: Entry point, aggregates resources.
+  - **`namespace.yaml`**: Namespace definition.
+  - **`README.md`**: Instructions.
+
+### 2. Multi-Profile Structure (e.g., `postgres`, `nginx`)
+Used when a service has distinct architectural patterns (e.g., Edge vs. Private Cloud).
+- **`<service-name>/`**
+  - **`README.md`**: Main documentation covering all profiles.
+  - **`base/`** (Optional): Shared resources (Deployment, Service, ConfigMaps).
+  - **`<profile-name>/`** (e.g., `edge`, `private-cloud`): Self-contained Kustomize overlay.
+    - **`kustomization.yaml`**: Profile-specific aggregation and patches.
+    - **`source.yaml`**, **`release.yaml`**: Profile-specific Flux resources.
+    - **`namespace.yaml`**: Profile-specific namespace.
+
+- **`resources/`**: Shared cluster-level configurations (e.g., `kind-config.yaml`).
+- **`docs/`**: Centralized documentation and development guidelines.
 
 ## Key Concepts
 
 ### Kustomize Pattern
-- Each service folder contains a `kustomization.yaml` that aggregates Kubernetes manifests.
-- Use `kustomization.yaml` to:
-  - Define resource order (namespaces first, operators before instances)
-  - Apply patches and overlays for different deployment models
-  - Reference external bases and components
+- **Namespace Handling:** `namespace.yaml` should be present but **commented out** in `kustomization.yaml` resources list. This separates the GitOps configuration (which assumes the namespace exists) from the manual testing workflow.
+  ```yaml
+  resources:
+    # For testing we keep the namespace manually, on production the repo is only one not for branch.
+    #- namespace.yaml
+    - source.yaml
+    - release.yaml
+  ```
 
 ### Flux Pattern
-- **HelmRepository** (`source.yaml`) — Points to upstream Helm chart repositories.
-- **HelmRelease** (`release.yaml`) — Declares Helm chart version, values overrides, and upgrade strategy.
-- **Kustomization** (`flux-delivery.yaml`) — Flux source reference and reconciliation settings.
+- **Source** (`source.yaml`) — Points to upstream Helm charts or Git repositories.
+- **Release** (`release.yaml`) — Declares Helm chart versions and values overrides.
+- **Production Alignment:**
+  - **Dev Examples:** Self-contained. Flux resources live in the app namespace.
+  - **Production Examples (e.g., Nginx):** Flux resources live in `flux-system` and target the app namespace.
 
 ### Sealed Secrets / Encryption
-- Sensitive data (credentials, tokens) are encrypted with Age or Sealed Secrets.
+- Sensitive data is encrypted with Age.
 - `age.agekey` is the local decryption key — **never commit to Git**.
-- Use `.gitignore` to exclude encryption keys.
-
-### Testing
-- `tests/` folders contain smoke tests: connectivity checks, resource health validation.
-- Run tests locally: `kubectl apply -f tests/`
 
 ## Development Workflow
 
 ### 1. **Add a New Service Example**
-   - Create a new folder: `examples/<service-name>/`
-   - Add namespace, source (HelmRepository), release (HelmRelease), and kustomization:
-     ```yaml
-     ---
-     apiVersion: v1
-     kind: Namespace
-     metadata:
-       name: <service-name>
-     ---
-     apiVersion: source.toolkit.fluxcd.io/v1
-     kind: HelmRepository
-     metadata:
-       name: <chart-repo>
-       namespace: <service-name>
-     spec:
-       interval: 1h
-       url: https://charts.example.com
-     ---
-     apiVersion: helm.toolkit.fluxcd.io/v2
-     kind: HelmRelease
-     metadata:
-       name: <service-name>
-       namespace: <service-name>
-     spec:
-       chart:
-         spec:
-           chart: <chart-name>
-           version: "X.Y.Z"
-           sourceRef:
-             kind: HelmRepository
-             name: <chart-repo>
-       values:
-         # Service-specific values
-     ---
-     apiVersion: kustomize.config.k8s.io/v1beta1
-     kind: Kustomization
-     metadata:
-       name: <service-name>
-     resources:
-       - namespace.yaml
-       - source.yaml
-       - release.yaml
-     ```
+   - Determine if it needs profiles (`edge`/`private-cloud`) or a simple structure.
+   - Create the necessary folders and manifests.
+   - Use `resources/kind-config.yaml` for local testing (ensures Ingress/Storage compatibility).
 
-### 2. **Test Locally**
-   - Dry-run with Kustomize:
+### 2. **Test Locally ("Happy Path")**
+   - Manually create the target namespace: `kubectl create namespace <name>`.
+   - Deploy using Flux CLI:
      ```bash
-     kubectl kustomize <service-folder>/
+     flux create source git ...
+     flux create kustomization ...
      ```
-   - Apply to a local cluster:
-     ```bash
-     kubectl apply -k <service-folder>/
-     ```
-   - Check reconciliation status:
-     ```bash
-     kubectl get helmrelease -n <namespace>
-     flux get all
-     ```
+   - Documentation should be minimal and focus on these success steps.
 
-### 3. **Add Encrypted Secrets**
-   - For PostgreSQL example, age encryption is used:
-     ```bash
-     # Encrypt a secret
-     age -R <age-key> -o secret.yaml.age secret.yaml
-     
-     # Decrypt (local development only)
-     age -d -i age.agekey secret.yaml.age > secret.yaml
-     ```
-   - Reference in `kustomization.yaml` via `sops` or Sealed Secrets controller.
-
-### 4. **Add Tests**
-   - Create a `tests/` folder with connectivity and health checks:
-     ```yaml
-     apiVersion: batch/v1
-     kind: Job
-     metadata:
-       name: service-connectivity-test
-     spec:
-       template:
-         spec:
-           containers:
-           - name: test
-             image: alpine:latest
-             command: ["sh", "-c", "wget -O- http://service:port/health"]
-           restartPolicy: Never
-     ```
-
-### 5. **Validate Manifests**
-   - Use `kubeval` to validate YAML structure:
-     ```bash
-     kubeval <service-folder>/*.yaml
-     ```
-   - Check Flux sources and releases:
-     ```bash
-     flux build kustomization <kustomization-name>
-     ```
-
-## Naming Conventions
-
-- **Folders**: `<service-name>/` (lowercase, kebab-case if multi-word)
-- **Files**: 
-  - `namespace.yaml` — Namespace definition
-  - `source.yaml` — HelmRepository or GitRepository
-  - `release.yaml` — HelmRelease
-  - `secret.yaml` — Sealed/encrypted secrets
-  - `flux-delivery.yaml` — Flux Kustomization/HelmRelease reconciliation config
-  - `kustomization.yaml` — Kustomize overlay
-  - `*-job.yaml` — Test jobs
+### 3. **Naming Conventions**
+   - **Folders**: lowercase, kebab-case.
+   - **Files** (in the deployment directory):
+     - `source.yaml` (formerly `repository.yaml`)
+     - `release.yaml`
+     - `namespace.yaml`
+     - `kustomization.yaml`
 
 ## Best Practices
 
-### Configuration
-1. **Immutability**: Use explicit chart versions, no `latest` tags.
-2. **Namespace isolation**: Each service in its own namespace; use network policies.
-3. **Resource requests/limits**: Define CPU and memory limits for all containers.
-4. **Health checks**: Include `livenessProbe` and `readinessProbe`.
-
-### Secrets Management
-1. **Never commit unencrypted secrets** — use Age, Sealed Secrets, or external vaults.
-2. **Rotate encryption keys** annually; store age.agekey in secure credential vault.
-3. **Use separate secrets per environment** (dev, staging, prod).
-
-### Deployment Safety
-1. **Pre-deployment validation**: Run `kubeval`, `kustomize build`, and `flux build`.
-2. **Smoke tests**: Include connectivity and health checks in `tests/`.
-3. **Progressive delivery**: Use Flux `interval` and `suspend` fields for rollout control.
-4. **Evidence collection**: Log all deployments and reconciliation events.
-
-## Common Tasks
-
-### Deploy PostgreSQL Stack
-```bash
-kubectl apply -k postgresql/
-kubectl wait --for=condition=ready pod -l app=postgresql -n postgresql --timeout=5m
-kubectl exec -it pod/<pg-pod> -n postgresql -- psql -U postgres -d postgres
-```
-
-### Monitor Flux Reconciliation
-```bash
-flux get all --all-namespaces
-flux logs --follow --all-namespaces
-```
-
-### Create Git Bundle for Air-Gapped Deploy
-```bash
-git bundle create examples-all.bundle --all
-# Transfer bundle to air-gapped environment
-git clone examples-all.bundle examples-repo
-```
-
-## References
-
-- **Kustomize Documentation**: https://kustomize.io
-- **Flux CD**: https://fluxcd.io
-- **Kubernetes Operators**: https://kubernetes.io/docs/concepts/extend-kubernetes/operator/
-- **Age Encryption**: https://age-encryption.org
-- **Sealed Secrets**: https://github.com/bitnami-labs/sealed-secrets
-- **PostgreSQL Operator**: https://github.com/zalando/postgres-operator
-
-## Contribution Guidelines
-
-See [CONTRIBUTING.md](../../infra-docs/CONTRIBUTING.md) for general workflow.
-
-**Additional rules for examples:**
-- All manifests must pass `kubeval` validation.
-- Include namespace definitions and resource isolation.
-- Document any external dependencies (e.g., CRDs, operators).
-- Test locally before submitting PR.
-- Use relative paths in Kustomize `bases` and `resources` fields.
+1. **Self-Contained Examples**: Do not assume `flux-system` existence unless explicitly demonstrating a production pattern.
+2. **Immutability**: Use explicit versions for container images and Helm charts.
+3. **Shared Infrastructure**: Use `resources/kind-config.yaml` to guarantee environment consistency (HAProxy ports, Longhorn mounts).
