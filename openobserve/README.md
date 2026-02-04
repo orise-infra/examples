@@ -32,3 +32,23 @@ kubectl port-forward svc/openobserve 5080:5080 -n openobserve
 # Test ingestion
 curl -u admin@example.com:password123 -XPOST http://localhost:5080/api/default/default/_json -d '[{"msg": "test"}]'
 ```
+
+## Rollback
+
+To rollback a deployment, revert the changes in your Git repository and push. Flux will automatically detect the commit change and synchronize the previous state.
+
+```bash
+git revert <commit-hash>
+git push origin <branch>
+```
+
+## Cleanup
+
+To remove the example from your cluster:
+
+```bash
+flux delete kustomization $EXAMPLE_NAME -n flux-system
+flux delete source git $EXAMPLE_NAME -n flux-system
+# Optionally delete the namespace
+kubectl delete ns openobserve
+```
