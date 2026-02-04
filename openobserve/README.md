@@ -4,6 +4,20 @@ Deploys **OpenObserve** using Flux CD.
 
 ## Deployment
 
+### Using bundlectl
+
+1. **Create Package**:
+   ```bash
+   bundlectl create package package-config.yaml
+   ```
+
+2. **Deploy Package**:
+   ```bash
+   bundlectl install openobserve-deployment-v0.0.4.package.tar.gz --use-pregenerated
+   ```
+
+### Using Flux CLI
+
 ```bash
 export EXAMPLE_NAME="openobserve"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"

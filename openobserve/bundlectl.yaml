@@ -1,0 +1,7 @@
+deployment_name: openobserve-deployment
+
+git_bundle:
+  repo: orise-infra/examples
+  source_repo_path: ../
+  tag: v0.0.4
+  flux_path: openobserve
