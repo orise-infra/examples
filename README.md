@@ -14,6 +14,14 @@ To test configurations locally before committing:
 kubectl apply -k <folder-name>/
 ```
 
+## Available Examples
+
+- **nginx**: Nginx deployment examples for Edge and Private Cloud.
+- **longhorn**: Longhorn distributed block storage.
+- **postgres**: PostgreSQL examples (Edge: StatefulSet, Private Cloud: Operator).
+- **openobserve**: Observability platform.
+- **metrics-server**: Cluster-wide aggregator of resource usage data.
+
 ## Create Git Bundle
 
 To create a git bundle of the current branch (HEAD):
@@ -37,4 +45,3 @@ git bundle verify examples-all.bundle
 ```
 
 This checks that the bundle is complete and can be used to clone or fetch from.
-
