@@ -4,15 +4,17 @@ Kubernetes configuration examples for deploying services with Flux.
 
 ## Usage
 
-These examples are designed to be deployed using Flux GitOps. Flux will automatically apply and reconcile these Kustomize configurations from your Git repository.
+These examples are designed to be deployed using Flux. We use a standardized pattern where Flux resources are managed in the `flux-system` namespace.
 
-### Manual Testing
+For detailed instructions on the deployment pattern, see [docs/setup.md](docs/setup.md).
 
-To test configurations locally before committing:
+### How to deploy
 
-```bash
-kubectl apply -k <folder-name>/
-```
+Each example folder contains a `README.md` with the specific commands needed to deploy it. In general, the process involves:
+
+1. Setting environment variables for the example name and repository.
+2. Creating a Flux `GitRepository` source in the `flux-system` namespace.
+3. Creating a Flux `Kustomization` in the `flux-system` namespace.
 
 ## Available Examples
 

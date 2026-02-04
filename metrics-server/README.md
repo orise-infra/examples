@@ -2,40 +2,27 @@
 
 Metrics Server is a scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.
 
-## Installation
-
-This example uses Flux to deploy Metrics Server.
-
-### Prerequisites
-
-- A Kubernetes cluster (Kind, Minikube, etc.)
-- Flux CLI installed locally
-
-### Deployment
-
-Deploy using Flux CLI:
+## Deployment
 
 ```bash
+export EXAMPLE_NAME="metrics-server"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
 
-# 1. Create Source in flux-system
-flux create source git metrics-server \
+# 1. Create Source
+flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
-  --interval=1m \
   --namespace=flux-system
 
-# 2. Create Kustomization in flux-system
-flux create kustomization metrics-server \
-  --source=GitRepository/metrics-server \
-  --path=./metrics-server \
+# 2. Create Kustomization
+flux create kustomization $EXAMPLE_NAME \
+  --source=GitRepository/$EXAMPLE_NAME \
+  --path="./$EXAMPLE_NAME" \
   --prune=true \
-  --wait=true \
-  --interval=10m \
   --namespace=flux-system
 ```
 
-## Configuration
+## Notes
 
-The `release.yaml` includes the `--kubelet-insecure-tls` argument which is required for running Metrics Server on Kind clusters due to self-signed certificates.
+The `release.yaml` (inside this folder) already includes the `--kubelet-insecure-tls` argument in its spec. This is required for running Metrics Server on Kind clusters due to self-signed certificates. No extra Flux CLI flags are needed.

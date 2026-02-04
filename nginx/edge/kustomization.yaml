@@ -5,8 +5,7 @@ namespace: nginx-edge
 resources:
   - ../base
   - ingress.yaml
-  # For testing we keep the namespace manually, on production the repo is only one not for branch.
-  #- namespace.yaml
+  - namespace.yaml
 
 patches:
   - target:

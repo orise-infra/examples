@@ -35,11 +35,10 @@ Used when a service has distinct architectural patterns (e.g., Edge vs. Private 
 ## Key Concepts
 
 ### Kustomize Pattern
-- **Namespace Handling:** `namespace.yaml` should be present but **commented out** in `kustomization.yaml` resources list. This separates the GitOps configuration (which assumes the namespace exists) from the manual testing workflow.
+- **Namespace Handling:** `namespace.yaml` **must be included** in the `kustomization.yaml` resources list. This ensures the namespace is managed alongside the application resources, even if Flux resources are in `flux-system`.
   ```yaml
   resources:
-    # For testing we keep the namespace manually, on production the repo is only one not for branch.
-    #- namespace.yaml
+    - namespace.yaml
     - source.yaml
     - release.yaml
   ```

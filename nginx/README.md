@@ -1,72 +1,33 @@
-# Nginx Production Example (Flux)
+# Nginx Production Example
 
-## Table of Contents
+This example demonstrates a **Production-Simulated** deployment of Nginx using Flux CD.
 
-1.  [Overview](#overview)
-2.  [Prerequisites](#prerequisites)
-3.  [Quick Start](#quick-start)
-4.  [Cleanup](#cleanup)
+## Profiles
 
-## Overview
-
-This example demonstrates a **Production-Simulated** deployment of Nginx using Flux CD. Unlike other examples in this repository, this setup intentionally uses the `flux-system` namespace to manage resources, mirroring a real-world GitOps control plane.
-
-Two profiles are provided:
-
-1.  **Edge**: Lightweight, single replica, custom "Edge" landing page.
-2.  **Private Cloud**: High Availability (3 replicas), custom "Private Cloud" landing page.
-
-Both profiles use **HAProxy Ingress** and mount a custom HTML page via ConfigMap.
+1.  **Edge**: Lightweight, single replica. Path: `./nginx/edge`
+2.  **Private Cloud**: High Availability (3 replicas). Path: `./nginx/private-cloud`
 
 ## Prerequisites
 
-*   **Flux CLI** installed locally.
-*   **Kind Cluster** with Ingress support.
-    *   Use the shared config: `resources/kind-config.yaml`
-    *   `kind create cluster --config resources/kind-config.yaml`
-*   **HAProxy Ingress Controller**:
-    *   Must be installed in the cluster.
-    *   [Installation Guide](https://github.com/haproxytech/kubernetes-ingress#installation) or use Helm:
-        ```bash
-        helm repo add haproxytech https://haproxytech.github.io/helm-charts
-        helm install haproxy-kubernetes-ingress haproxytech/kubernetes-ingress \
-          --create-namespace --namespace haproxy-controller \
-          --set controller.service.type=NodePort \
-          --set controller.service.nodePorts.http=30080 \
-          --set controller.service.nodePorts.https=30443
-        ```
-    *   *Note: The Kind config maps host ports 8080/8443 to container ports 30080/30443, so ensure your Ingress Controller aligns with those or use `NodePort` mapping if preferred.*
-*   **GHCR Token**: A GitHub Personal Access Token (PAT) with `read:packages` scope is required to pull the container image.
+*   **Kind Cluster** with Ingress support (`resources/kind-config.yaml`).
+*   **HAProxy Ingress Controller** installed.
+*   **GHCR Token**: Image pull secret `ghcr-secret` required in the target namespace.
 
-## Quick Start
+## Deployment
 
-> **Production Note**: This example strictly follows the **Production** pattern where Flux resources live in `flux-system` and target the application namespace.
+Choose a profile (`edge` or `private-cloud`) and follow the commands below.
 
-### 1. Configure Environment
+### 1. Edge Profile
 
 ```bash
+export EXAMPLE_NAME="nginx-edge"
+export TARGET_NAMESPACE="nginx-edge"
+export APP_PATH="./nginx/edge"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
 
-# Choose Profile: "edge" or "private-cloud"
-export PROFILE="edge" 
-# export PROFILE="private-cloud"
-
-export TARGET_NAMESPACE="nginx-$PROFILE"
-```
-
-### 2. Create Namespace & Deploy (Production Style)
-
-Create the target application namespace manually (simulating tenant separation):
-
-```bash
+# Create Namespace and Secret first
 kubectl create namespace $TARGET_NAMESPACE
-```
-
-Create the image pull secret in the target namespace and patch the default ServiceAccount to use it. This avoids modifying the Deployment manifest.
-
-```bash
-# 1. Create the secret
 kubectl create secret docker-registry ghcr-secret \
   --docker-server=ghcr.io \
   --docker-username=YOUR_GITHUB_USERNAME \
@@ -74,55 +35,54 @@ kubectl create secret docker-registry ghcr-secret \
   --docker-email=your-email@example.com \
   --namespace=$TARGET_NAMESPACE
 
-# 2. Patch the default ServiceAccount to use this secret
 kubectl patch serviceaccount default \
   -p '{"imagePullSecrets": [{"name": "ghcr-secret"}]}' \
   -n $TARGET_NAMESPACE
-```
 
-Deploy using Flux, keeping the management in `flux-system`:
-
-```bash
-# 1. Create Source in flux-system
-flux create source git nginx-repo \
+# Create Flux Resources
+flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
-  --interval=1m \
   --namespace=flux-system
 
-# 2. Create Kustomization in flux-system, targeting the App Namespace
-flux create kustomization nginx-$PROFILE \
-  --source=GitRepository/nginx-repo \
-  --path=./nginx/$PROFILE \
+flux create kustomization $EXAMPLE_NAME \
+  --source=GitRepository/$EXAMPLE_NAME \
+  --path=$APP_PATH \
   --prune=true \
-  --wait=true \
-  --interval=10m \
-  --namespace=flux-system \
-  --target-namespace=$TARGET_NAMESPACE
+  --namespace=flux-system
 ```
 
-### 3. Verify
-
-Check the deployment:
+### 2. Private Cloud Profile
 
 ```bash
-kubectl get pods -n $TARGET_NAMESPACE
-kubectl get ingress -n $TARGET_NAMESPACE
-```
+export EXAMPLE_NAME="nginx-private-cloud"
+export TARGET_NAMESPACE="nginx-private-cloud"
+export APP_PATH="./nginx/private-cloud"
+export GIT_REPO_URL="https://github.com/orise-infra/examples"
+export GIT_BRANCH="main"
 
-**Access the Application:**
-If using Kind with the provided config and HAProxy Ingress listening on port 80:
+# Create Namespace and Secret first
+kubectl create namespace $TARGET_NAMESPACE
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=YOUR_GITHUB_USERNAME \
+  --docker-password=YOUR_GHCR_TOKEN \
+  --docker-email=your-email@example.com \
+  --namespace=$TARGET_NAMESPACE
 
-```bash
-# Curl localhost (mapped to Kind node port 8080)
-curl http://localhost:8080/
-```
-You should see the profile-specific HTML content (e.g., "Welcome to ORISE Edge Nginx").
+kubectl patch serviceaccount default \
+  -p '{"imagePullSecrets": [{"name": "ghcr-secret"}]}' \
+  -n $TARGET_NAMESPACE
 
-## Cleanup
+# Create Flux Resources
+flux create source git $EXAMPLE_NAME \
+  --url=$GIT_REPO_URL \
+  --branch=$GIT_BRANCH \
+  --namespace=flux-system
 
-```bash
-flux delete kustomization nginx-$PROFILE --namespace=flux-system
-flux delete source git nginx-repo --namespace=flux-system
-kubectl delete namespace $TARGET_NAMESPACE
+flux create kustomization $EXAMPLE_NAME \
+  --source=GitRepository/$EXAMPLE_NAME \
+  --path=$APP_PATH \
+  --prune=true \
+  --namespace=flux-system
 ```

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: openobserve
+  name: longhorn-system
   labels:
     orise.io/tenant: common
     orise.io/environment: private-cloud
