@@ -9,6 +9,8 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: prod-db
+  annotations:
+    kustomize.toolkit.fluxcd.io/depends-on: flux-system/cnpg
 spec:
   instances: 3
   imageName: ghcr.io/cloudnative-pg/postgresql:16

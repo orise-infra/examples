@@ -86,3 +86,38 @@ flux create kustomization $EXAMPLE_NAME \
   --prune=true \
   --namespace=flux-system
 ```
+
+## Verification
+
+```bash
+# Check the status of the kustomization
+flux get kustomizations $EXAMPLE_NAME -n flux-system
+
+# Check the Nginx pods
+# For Edge: namespace is 'nginx-edge'
+# For Private Cloud: namespace is 'nginx-private-cloud'
+kubectl get pods -n $TARGET_NAMESPACE
+
+# Test access (assuming you have an Ingress controller)
+curl -H "Host: nginx.example.com" http://localhost
+```
+
+## Rollback
+
+To rollback a deployment, revert the changes in your Git repository and push. Flux will automatically detect the commit change and synchronize the previous state.
+
+```bash
+git revert <commit-hash>
+git push origin <branch>
+```
+
+## Cleanup
+
+To remove the example from your cluster:
+
+```bash
+flux delete kustomization $EXAMPLE_NAME -n flux-system
+flux delete source git $EXAMPLE_NAME -n flux-system
+# Delete the namespace and the ghcr-secret
+kubectl delete ns $TARGET_NAMESPACE
+```

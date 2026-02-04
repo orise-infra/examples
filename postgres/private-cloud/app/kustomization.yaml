@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: postgres-private-cloud
+
+resources:
+  - cluster.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/instance: prod-db
+      app.kubernetes.io/component: database
+      app.kubernetes.io/part-of: orise-infra
+      orise.io/deployment-model: private-cloud
