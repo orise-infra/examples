@@ -1,71 +1,58 @@
-# PostgreSQL Example (Flux)
+# PostgreSQL Example
 
-## Table of Contents
+This example demonstrates two architectural patterns for deploying PostgreSQL.
 
-1.  [Overview](#overview)
-2.  [Prerequisites](#prerequisites)
-3.  [Quick Start](#quick-start)
-4.  [Cleanup](#cleanup)
+## Profiles
 
-## Overview
-
-This example demonstrates two architectural patterns for deploying PostgreSQL:
-
-1.  **Private Cloud (Operator-based)**: Uses the **CloudNativePG (CNPG)** operator. Best for high-availability.
-2.  **Edge (Native)**: Uses a standard Kubernetes **StatefulSet**. Optimized for low resource consumption.
+1.  **Private Cloud (Operator-based)**: Uses the **CloudNativePG (CNPG)** operator. Path: `./postgres/private-cloud`
+2.  **Edge (Native)**: Uses a standard Kubernetes **StatefulSet**. Path: `./postgres/edge`
 
 ## Prerequisites
 
-*   Kubernetes Cluster with **Flux CD v2.0+** installed.
-*   **Flux CLI** installed locally.
 *   **Storage Classes**:
     *   **Private Cloud**: `longhorn-ha` (provided by Longhorn).
     *   **Edge**: `standard` (local-path).
 
-## Quick Start
+## Deployment
 
-> **Warning**: This is a **development example** for testing. 
+Choose a profile (`edge` or `private-cloud`) and follow the commands below.
 
-### 1. Configure Environment
+### 1. Edge Profile (Native StatefulSet)
 
 ```bash
+export EXAMPLE_NAME="postgres-edge"
+export APP_PATH="./postgres/edge"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
-export POSTGRES_PROFILE="edge" # or "private-cloud"
-export NAMESPACE="postgres-$POSTGRES_PROFILE"
-```
 
-### 2. Create Namespace & Deploy
-
-```bash
-kubectl create namespace $NAMESPACE
-
-flux create source git postgres-example \
+flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
-  --interval=1m \
-  --namespace=$NAMESPACE
+  --namespace=flux-system
 
-flux create kustomization postgres-$POSTGRES_PROFILE \
-  --source=GitRepository/postgres-example \
-  --path=./postgres/$POSTGRES_PROFILE \
+flux create kustomization $EXAMPLE_NAME \
+  --source=GitRepository/$EXAMPLE_NAME \
+  --path=$APP_PATH \
   --prune=true \
-  --wait=true \
-  --interval=10m \
-  --namespace=$NAMESPACE
+  --namespace=flux-system
 ```
 
-### 3. Verify
+### 2. Private Cloud Profile (Operator-based)
 
 ```bash
-kubectl get pods -n $NAMESPACE
-flux get kustomization postgres-$POSTGRES_PROFILE -n $NAMESPACE
-```
+export EXAMPLE_NAME="postgres-private-cloud"
+export APP_PATH="./postgres/private-cloud"
+export GIT_REPO_URL="https://github.com/orise-infra/examples"
+export GIT_BRANCH="main"
 
-## Cleanup
+flux create source git $EXAMPLE_NAME \
+  --url=$GIT_REPO_URL \
+  --branch=$GIT_BRANCH \
+  --namespace=flux-system
 
-```bash
-flux delete kustomization postgres-$POSTGRES_PROFILE --namespace=$NAMESPACE
-flux delete source git postgres-example --namespace=$NAMESPACE
-kubectl delete namespace $NAMESPACE
+flux create kustomization $EXAMPLE_NAME \
+  --source=GitRepository/$EXAMPLE_NAME \
+  --path=$APP_PATH \
+  --prune=true \
+  --namespace=flux-system
 ```

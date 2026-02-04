@@ -11,8 +11,7 @@ labels:
       orise.io/deployment-model: edge
 
 resources:
-  # For testing we keep the namespace manually, on production the repo is only one not for branch.
-  #- namespace.yaml
+  - namespace.yaml
   - secret.yaml
   - service.yaml
   - statefulset.yaml
