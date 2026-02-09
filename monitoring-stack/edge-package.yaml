@@ -1,0 +1,10 @@
+deployment_name: monitoring-stack
+device_types:
+  - ipc-x86-64
+  - vm-x86-64
+
+git_bundle:
+  repo: orise-infra/examples
+  source_repo_path: ../
+  tag: v0.0.5
+  flux_path: monitoring-stack/flux/base/sinks

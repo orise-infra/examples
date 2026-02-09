@@ -1,8 +1,7 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: chronograf
-  namespace: monitoring-stack
 spec:
   interval: 1h
   chart:
@@ -12,12 +11,9 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: influxdata
-        namespace: flux-system
   values:
     env:
       INFLUXDB_URL: http://influxdb:8086
-    # Note: We will use valuesFrom for secrets in the overlay or keep it minimal here
-    # For now, let's keep it minimal and assume the secret exists
   valuesFrom:
     - kind: Secret
       name: monitoring-credentials

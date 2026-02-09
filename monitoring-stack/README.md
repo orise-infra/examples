@@ -21,9 +21,7 @@ This example demonstrates a lightweight monitoring stack consisting of two disti
 
 ## Deployment
 
-This example follows the [Canonical Namespace Handling Strategy](../README.md#canonical-namespace-handling-strategy).
-
-### 1. Manual Deployment (Plain Manifests)
+### Manual Deployment (Plain Manifests)
 
 Best for local development and rapid testing.
 
@@ -42,15 +40,14 @@ kubectl apply -f manifests/chronograf.yaml
 kubectl apply -f manifests/fluent-bit.yaml
 ```
 
-### 2. Flux Deployment (Chronograf only)
+### Flux Deployment (Chronograf only)
 
-This method manages Chronograf as a HelmRelease through Flux.
+This method manages Chronograf as a HelmRelease through Flux. Follow the [Standard Flux Deployment Pattern](../docs/deployment-patterns.md#standard-flux-deployment-pattern) with these values:
 
 ```bash
 export EXAMPLE_NAME="monitoring-stack-flux"
 export TARGET_NAMESPACE="monitoring-stack"
 export APP_PATH="./monitoring-stack/flux/base/sinks"
-export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
 
 # Ensure the native dependencies are running first
@@ -58,17 +55,21 @@ kubectl apply -f manifests/namespace.yaml
 kubectl apply -f manifests/secrets.yaml
 kubectl apply -f manifests/influxdb.yaml
 
-# Create Flux Resources
-flux create source git $EXAMPLE_NAME \
-  --url=$GIT_REPO_URL \
-  --branch=$GIT_BRANCH \
-  --namespace=flux-system
+# Then follow the standard pattern from docs/deployment-patterns.md
+```
 
-flux create kustomization $EXAMPLE_NAME \
-  --source=GitRepository/$EXAMPLE_NAME \
-  --path=$APP_PATH \
-  --prune=true \
-  --namespace=flux-system
+### StratumOS Deployment
+
+StratumOS uses the `flux-monitoring-stack` namespace as the default for Flux-managed monitoring resources.
+
+```bash
+export FLUX_NAMESPACE="flux-monitoring-stack"
+
+# Create the secret in the flux-monitoring namespace
+kubectl create secret generic monitoring-credentials \
+  --from-literal=INFLUXDB_USERNAME=admin \
+  --from-literal=INFLUXDB_PASSWORD=change-me-now \
+  --namespace=$FLUX_NAMESPACE
 ```
 
 ## Verification
@@ -78,7 +79,7 @@ flux create kustomization $EXAMPLE_NAME \
 kubectl get all -n $TARGET_NAMESPACE
 
 # 2. Check the Flux kustomization (if using Flux)
-flux get kustomizations $EXAMPLE_NAME -n flux-system
+flux get kustomizations monitoring-stack-flux -n flux-system
 
 # 3. Access Chronograf
 kubectl port-forward svc/chronograf 8888:8888 -n $TARGET_NAMESPACE
@@ -94,11 +95,10 @@ Once in Chronograf (`http://localhost:8888`), use these InfluxQL queries:
 
 ## Cleanup
 
+For manual manifest cleanup:
 ```bash
-# For Flux deployment
-flux delete kustomization $EXAMPLE_NAME -n flux-system
-flux delete source git $EXAMPLE_NAME -n flux-system
-
-# For Manual deployment
 kubectl delete -f manifests/
 ```
+
+For Flux deployment cleanup, refer to [docs/deployment-patterns.md#cleanup](../docs/deployment-patterns.md#cleanup).
+
