@@ -1,0 +1,17 @@
+config:
+  outputs: |
+    [OUTPUT]
+        Name            influxdb
+        Match           *
+        Host            influxdb.monitoring-stack.svc.cluster.local
+        Port            8086
+        Database        fluentbit
+        Auto_Create_DB  On
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "128Mi"
+    cpu: "200m"
+

@@ -2,7 +2,14 @@
 
 Deploys **OpenObserve** using Flux CD.
 
+## Prerequisites
+
+*   **Storage Classes**:
+    *   **Standard**: `standard` (local-path provisioner).
+
 ## Deployment
+
+This example follows the [Canonical Namespace Handling Strategy](../README.md#canonical-namespace-handling-strategy).
 
 ### Using bundlectl
 
@@ -20,16 +27,20 @@ Deploys **OpenObserve** using Flux CD.
 
 ```bash
 export EXAMPLE_NAME="openobserve"
+export TARGET_NAMESPACE="openobserve"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
 
-# 1. Create Source
+# 1. Create Namespace
+kubectl create namespace $TARGET_NAMESPACE
+
+# 2. Create Source (in flux-system)
 flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
   --namespace=flux-system
 
-# 2. Create Kustomization
+# 3. Create Kustomization (in flux-system)
 flux create kustomization $EXAMPLE_NAME \
   --source=GitRepository/$EXAMPLE_NAME \
   --path="./$EXAMPLE_NAME" \
@@ -41,7 +52,7 @@ flux create kustomization $EXAMPLE_NAME \
 
 ```bash
 # Forward port to access the UI/API
-kubectl port-forward svc/openobserve 5080:5080 -n openobserve
+kubectl port-forward svc/openobserve 5080:5080 -n $TARGET_NAMESPACE
 
 # Test ingestion
 curl -u admin@example.com:password123 -XPOST http://localhost:5080/api/default/default/_json -d '[{"msg": "test"}]'
@@ -64,5 +75,5 @@ To remove the example from your cluster:
 flux delete kustomization $EXAMPLE_NAME -n flux-system
 flux delete source git $EXAMPLE_NAME -n flux-system
 # Optionally delete the namespace
-kubectl delete ns openobserve
+kubectl delete ns $TARGET_NAMESPACE
 ```

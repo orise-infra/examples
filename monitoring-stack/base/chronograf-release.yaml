@@ -1,0 +1,20 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+
+      valuesKey: values.yaml
+      name: chronograf-values
+    - kind: ConfigMap
+  valuesFrom:
+        namespace: flux-system
+        name: influxdata
+        kind: HelmRepository
+      sourceRef:
+      version: "1.2.5"
+      chart: chronograf
+    spec:
+  chart:
+  interval: 1h
+spec:
+  namespace: monitoring-stack
+  name: chronograf
+metadata:
+kind: HelmRelease
