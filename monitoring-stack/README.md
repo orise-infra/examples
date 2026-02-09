@@ -71,6 +71,23 @@ flux create kustomization $EXAMPLE_NAME \
   --namespace=flux-system
 ```
 
+### 3. StratumOS Deployment
+
+StratumOS uses the `flux-monitoring` namespace as the default for Flux-managed monitoring resources.
+
+```bash
+export FLUX_NAMESPACE="flux-monitoring"
+
+# Create the secret in the flux-monitoring namespace
+kubectl create secret generic monitoring-credentials \
+  --from-literal=INFLUXDB_USERNAME=admin \
+  --from-literal=INFLUXDB_PASSWORD=change-me-now \
+  --namespace=$FLUX_NAMESPACE
+
+# Or apply from manifest with namespace override
+kubectl apply -f manifests/secrets.yaml --namespace=$FLUX_NAMESPACE
+```
+
 ## Verification
 
 ```bash
