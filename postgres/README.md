@@ -17,14 +17,21 @@ This example demonstrates two architectural patterns for deploying PostgreSQL.
 
 Choose a profile (`edge` or `private-cloud`) and follow the commands below.
 
+This example follows the [Canonical Namespace Handling Strategy](../README.md#canonical-namespace-handling-strategy).
+
 ### 1. Edge Profile (Native StatefulSet)
 
 ```bash
 export EXAMPLE_NAME="postgres-edge"
+export TARGET_NAMESPACE="postgres-edge"
 export APP_PATH="./postgres/edge"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
 
+# Create Namespace
+kubectl create namespace $TARGET_NAMESPACE
+
+# Create Flux Resources (in flux-system)
 flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
@@ -44,6 +51,10 @@ This profile requires a two-step deployment to ensure the **CloudNativePG** oper
 ```bash
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
+export TARGET_NAMESPACE="postgres-private-cloud"
+
+# Create Namespace
+kubectl create namespace $TARGET_NAMESPACE
 
 # Step 1: Deploy the Operator (Infrastructure)
 # Ensure the source is created and ready before proceeding
@@ -60,7 +71,7 @@ flux create kustomization postgres-operator \
   --source=GitRepository/postgres-infra \
   --path="./postgres/private-cloud/base" \
   --prune=true \
-  --health-check="HelmRelease/cnpg.flux-system" \
+  --health-check="HelmRelease/cnpg.$TARGET_NAMESPACE" \
   --namespace=flux-system
 
 # Step 2: Deploy the Cluster (Application)
@@ -82,14 +93,14 @@ flux get kustomizations -n flux-system
 
 # 2. Check the PostgreSQL pods and PersistentVolumeClaims (PVCs)
 # Replace <namespace> with 'postgres-edge' or 'postgres-private-cloud'
-kubectl get pods,pvc -n <namespace>
+kubectl get pods,pvc -n $TARGET_NAMESPACE
 
 # 3. Verify Persistent Volumes (PVs) are provisioned and bound
 # This confirms the storage class (longhorn-ha or standard) is working.
-kubectl get pv | grep <namespace>
+kubectl get pv | grep $TARGET_NAMESPACE
 
 # 4. (Optional) For Private Cloud, check the CNPG Cluster status
-kubectl get cluster -n postgres-private-cloud
+kubectl get cluster -n $TARGET_NAMESPACE
 ```
 
 ## Troubleshooting
@@ -101,16 +112,15 @@ If you see this reconciliation error, it means the CNPG operator hasn't been ful
 **Resolution**: This is automatically handled by the Kustomization configuration:
 - The `cluster.yaml` includes a dependency annotation (`kustomize.toolkit.fluxcd.io/depends-on`) that tells Flux to wait for the `cnpg` HelmRelease to be ready before deploying the Cluster resource
 - The `operator.yaml` (HelmRelease) is configured with `install.crds: Create` and `upgrade.crds: CreateReplace` to ensure CRDs are installed
-- The `source.yaml` (HelmRepository) is deployed in the `flux-system` namespace for proper Flux integration
 
 Allow 2-3 minutes for the CNPG operator to fully deploy before the Cluster resource is created. Check the status with:
 
 ```bash
 # Check HelmRelease status
-kubectl get helmreleases -n flux-system | grep cnpg
+kubectl get helmreleases -n $TARGET_NAMESPACE | grep cnpg
 
 # Check for any errors
-kubectl describe helmrelease cnpg -n flux-system
+kubectl describe helmrelease cnpg -n $TARGET_NAMESPACE
 ```
 
 ## Rollback
@@ -130,5 +140,5 @@ To remove the example from your cluster:
 flux delete kustomization $EXAMPLE_NAME -n flux-system
 flux delete source git $EXAMPLE_NAME -n flux-system
 # Optionally delete the namespace
-kubectl delete ns <namespace>
+kubectl delete ns $TARGET_NAMESPACE
 ```

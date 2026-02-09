@@ -9,6 +9,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: prod-db
+  namespace: postgres-private-cloud
   annotations:
     kustomize.toolkit.fluxcd.io/depends-on: flux-system/cnpg
 spec:

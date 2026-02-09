@@ -1,25 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 namespace: nginx-edge
 
 resources:
   - ../base
   - ingress.yaml
   - namespace.yaml
-
-patches:
-  - target:
-      kind: ConfigMap
-      name: nginx-index
-    patch: |-
-      - op: replace
-        path: /data/index.html
-        value: |
-          <!DOCTYPE html>
-          <html>
-          <head><title>Edge Nginx</title></head>
-          <body>
-          <h1>Welcome to ORISE Edge Nginx</h1>
-          <p>Optimized for edge deployment.</p>
-          </body>
-          </html>

@@ -35,20 +35,15 @@ Used when a service has distinct architectural patterns (e.g., Edge vs. Private 
 ## Key Concepts
 
 ### Kustomize Pattern
-- **Namespace Handling:** `namespace.yaml` **must be included** in the `kustomization.yaml` resources list. This ensures the namespace is managed alongside the application resources, even if Flux resources are in `flux-system`.
-  ```yaml
-  resources:
-    - namespace.yaml
-    - source.yaml
-    - release.yaml
-  ```
+- **Namespace Handling:** See the canonical explanation in [README.md](../README.md#canonical-namespace-handling-strategy).
+- Key point: `namespace.yaml` is the single source of truth, **NOT** the `namespace:` field in kustomization.yaml.
 
 ### Flux Pattern
 - **Source** (`source.yaml`) — Points to upstream Helm charts or Git repositories.
 - **Release** (`release.yaml`) — Declares Helm chart versions and values overrides.
-- **Production Alignment:**
-  - **Dev Examples:** Self-contained. Flux resources live in the app namespace.
-  - **Production Examples (e.g., Nginx):** Flux resources live in `flux-system` and target the app namespace.
+- **Namespace Location**: See [README.md](../README.md#canonical-namespace-handling-strategy) for the canonical pattern.
+  - Production examples (e.g., nginx): Flux resources in `flux-system`, app resources in app namespace.
+  - Simple examples (e.g., metrics-server): Flux resources can co-locate with app namespace for self-contained setups.
 
 ### Sealed Secrets / Encryption
 - Sensitive data is encrypted with Age.

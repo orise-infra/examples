@@ -4,17 +4,43 @@ Kubernetes configuration examples for deploying services with Flux.
 
 ## Usage
 
-These examples are designed to be deployed using Flux. We use a standardized pattern where Flux resources are managed in the `flux-system` namespace.
+These examples are designed to be deployed using Flux.
 
-For detailed instructions on the deployment pattern, see [docs/setup.md](docs/setup.md).
+For detailed instructions and deployment steps, see [docs/setup.md](docs/setup.md).
 
-### How to deploy
+## Canonical Namespace Handling Strategy
 
-Each example folder contains a `README.md` with the specific commands needed to deploy it. In general, the process involves:
+We follow a strict pattern for namespace management to ensure consistency and avoid configuration drift. This is the **production-aligned pattern (Pattern 2)**.
 
-1. Setting environment variables for the example name and repository.
-2. Creating a Flux `GitRepository` source in the `flux-system` namespace.
-3. Creating a Flux `Kustomization` in the `flux-system` namespace.
+### Key Principles
+
+1. **Application Namespace**: Each application has its own namespace defined in a `namespace.yaml` file (e.g., `nginx-edge`, `postgres-db`).
+   - The namespace is created as part of the application deployment.
+   - All application resources (Pods, Services, ConfigMaps, etc.) live in this namespace.
+
+2. **Single Source of Truth for Namespace**: The `namespace.yaml` file is the **single source of truth**.
+   - It is **included as a resource** in the `kustomization.yaml` resources list.
+   - The `kustomization.yaml` file must **NOT** have a top-level `namespace:` field (this avoids duplication and brittleness).
+   - Base folders do not need `namespace.yaml`.
+   - Example:
+     ```yaml
+     resources:
+       - namespace.yaml
+       - source.yaml
+       - release.yaml
+     ```
+
+3. **Flux Resources Location**: 
+   - **Flux system resources** (`GitRepository`, `Kustomization`) are created in the **`flux-system` namespace**.
+   - **Application resources** (Helm releases, Ingress, etc.) are deployed to their own **application namespace**.
+   - This separation provides security isolation and aligns with production practices.
+
+### Quick Overview
+
+Each example folder contains a `README.md` with specific deployment instructions. The deployment follows the pattern defined above:
+- Flux resources go in `flux-system` namespace
+- Application resources go in their own namespace
+- Namespaces are defined once in `namespace.yaml` (not duplicated in `kustomization.yaml`)
 
 ## Available Examples
 

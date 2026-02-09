@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: openobserve
@@ -37,4 +37,5 @@ spec:
             key: ZO_ROOT_USER_PASSWORD
     persistence:
       enabled: true
+      storageClass: "standard"
       size: 10Gi

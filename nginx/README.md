@@ -1,6 +1,6 @@
 # Nginx Production Example
 
-This example demonstrates a **Production-Simulated** deployment of Nginx using Flux CD.
+This example demonstrates a **Production-Simulated** deployment of Nginx using Flux CD and Helm Charts.
 
 ## Profiles
 
@@ -17,6 +17,9 @@ This example demonstrates a **Production-Simulated** deployment of Nginx using F
 
 Choose a profile (`edge` or `private-cloud`) and follow the commands below.
 
+**Note:** This example follows the [Canonical Namespace Handling Strategy](../README.md#canonical-namespace-handling-strategy). Flux resources go in `flux-system`, application resources in their own namespace.
+
+
 ### 1. Edge Profile
 
 ```bash
@@ -30,16 +33,16 @@ export GIT_BRANCH="main"
 kubectl create namespace $TARGET_NAMESPACE
 kubectl create secret docker-registry ghcr-secret \
   --docker-server=ghcr.io \
-  --docker-username=YOUR_GITHUB_USERNAME \
-  --docker-password=YOUR_GHCR_TOKEN \
-  --docker-email=your-email@example.com \
+  --docker-username=hurtadosanti \
+  --docker-password=${GHCR_TOKEN} \
+  --docker-email=hurtadosanti@proton.me \
   --namespace=$TARGET_NAMESPACE
 
 kubectl patch serviceaccount default \
   -p '{"imagePullSecrets": [{"name": "ghcr-secret"}]}' \
   -n $TARGET_NAMESPACE
 
-# Create Flux Resources
+# Create Flux Resources (in flux-system namespace)
 flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
@@ -74,7 +77,7 @@ kubectl patch serviceaccount default \
   -p '{"imagePullSecrets": [{"name": "ghcr-secret"}]}' \
   -n $TARGET_NAMESPACE
 
-# Create Flux Resources
+# Create Flux Resources (in flux-system namespace)
 flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
@@ -90,12 +93,13 @@ flux create kustomization $EXAMPLE_NAME \
 ## Verification
 
 ```bash
-# Check the status of the kustomization
+# Check the Flux Kustomization status (in flux-system)
 flux get kustomizations $EXAMPLE_NAME -n flux-system
 
-# Check the Nginx pods
-# For Edge: namespace is 'nginx-edge'
-# For Private Cloud: namespace is 'nginx-private-cloud'
+# Check the Helm Release (in app namespace)
+flux get helmreleases $EXAMPLE_NAME -n $TARGET_NAMESPACE
+
+# Check the Nginx pods (in app namespace)
 kubectl get pods -n $TARGET_NAMESPACE
 
 # Test access (assuming you have an Ingress controller)

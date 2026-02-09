@@ -4,18 +4,24 @@ Metrics Server is a scalable, efficient source of container resource metrics for
 
 ## Deployment
 
+This example follows the [Canonical Namespace Handling Strategy](../README.md#canonical-namespace-handling-strategy).
+
 ```bash
 export EXAMPLE_NAME="metrics-server"
+export TARGET_NAMESPACE="metrics-server"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
 export GIT_BRANCH="main"
 
-# 1. Create Source
+# 1. Create Namespace
+kubectl create namespace $TARGET_NAMESPACE
+
+# 2. Create Source (in flux-system)
 flux create source git $EXAMPLE_NAME \
   --url=$GIT_REPO_URL \
   --branch=$GIT_BRANCH \
   --namespace=flux-system
 
-# 2. Create Kustomization
+# 3. Create Kustomization (in flux-system)
 flux create kustomization $EXAMPLE_NAME \
   --source=GitRepository/$EXAMPLE_NAME \
   --path="./$EXAMPLE_NAME" \
@@ -30,7 +36,7 @@ flux create kustomization $EXAMPLE_NAME \
 flux get kustomizations $EXAMPLE_NAME -n flux-system
 
 # Check the Metrics Server pods
-kubectl get pods -n kube-system -l k8s-app=metrics-server
+kubectl get pods -n $TARGET_NAMESPACE
 
 # Verify metrics are being collected
 kubectl top nodes
@@ -52,6 +58,7 @@ To remove the example from your cluster:
 ```bash
 flux delete kustomization $EXAMPLE_NAME -n flux-system
 flux delete source git $EXAMPLE_NAME -n flux-system
+kubectl delete ns $TARGET_NAMESPACE
 ```
 
 ## Notes
