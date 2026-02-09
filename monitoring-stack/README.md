@@ -51,7 +51,7 @@ export EXAMPLE_NAME="monitoring-stack-flux"
 export TARGET_NAMESPACE="monitoring-stack"
 export APP_PATH="./monitoring-stack/flux/base/sinks"
 export GIT_REPO_URL="https://github.com/orise-infra/examples"
-export GIT_BRANCH="main"
+export GIT_BRANCH="fix/monitoring-namespace"
 
 # Ensure the native dependencies are running first
 kubectl apply -f manifests/namespace.yaml
