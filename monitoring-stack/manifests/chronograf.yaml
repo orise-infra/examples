@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chronograf
+  namespace: monitoring-stack
+spec:
+  selector:
+    matchLabels:
+      app: chronograf
+  template:
+    metadata:
+      labels:
+        app: chronograf
+    spec:
+      containers:
+      - name: chronograf
+        image: chronograf:1.9
+        ports:
+        - containerPort: 8888
+        env:
+        - name: INFLUXDB_URL
+          value: http://influxdb:8086
+        - name: INFLUXDB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: monitoring-credentials
+              key: INFLUXDB_USERNAME
+        - name: INFLUXDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: monitoring-credentials
+              key: INFLUXDB_PASSWORD
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chronograf
+  namespace: monitoring-stack
+spec:
+  ports:
+  - port: 8888
+    targetPort: 8888
+  selector:
+    app: chronograf

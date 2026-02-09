@@ -1,249 +1,104 @@
-# Monitoring Stack Example - Multi-Environment
+# Monitoring Stack Example
 
-This example demonstrates a monitoring stack consisting of InfluxDB 1.8, Chronograf, and Fluent-bit, using **Kustomize overlays** for multi-environment deployments.
+This example demonstrates a lightweight monitoring stack consisting of two distinct layers: **Data Collectors** and **Sinks**.
+
+## Profiles
+
+1.  **Edge (Native)**: Optimized for single-node or low-resource environments. Path: `./monitoring-stack/manifests`
+2.  **Flux (Hybrid)**: Deploys Chronograf using Helm via Flux, while keeping the rest of the stack native. Path: `./monitoring-stack/flux/base/sinks`
 
 ## Architecture
 
-### Components
+- **Collectors**: Fluent Bit (`DaemonSet`) - Collects logs and host metrics (CPU/Mem).
+- **Sinks**: 
+    - **InfluxDB 1.8**: Time-series database with HTTP authentication.
+    - **Chronograf**: Web interface for visualization.
 
-- **InfluxDB 1.8**: Time-series database for storing logs and metrics
-- **Chronograf**: Visualization tool for InfluxDB data
-- **Fluent-bit**: Log processor and forwarder, configured to send logs to InfluxDB
+## Prerequisites
 
-
-## Environment Differences
-
-| Component               | Edge        | Private Cloud          |
-|-------------------------|-------------|------------------------|
-| **InfluxDB Storage**    | 1Gi         | 100Gi (fast-ssd)       |
-| **InfluxDB Memory**     | 256Mi-512Mi | 4Gi-8Gi                |
-| **InfluxDB CPU**        | 100m-500m   | 2-4                    |
-| **Chronograf Replicas** | 1           | 3                      |
-| **Chronograf Ingress**  | No          | Yes (TLS)              |
-| **Fluent-bit Memory**   | 64Mi-128Mi  | 256Mi-512Mi            |
-| **Authentication**      | Disabled    | Enabled                |
-| **Monitoring**          | No          | Prometheus annotations |
+- **Namespace**: `monitoring-stack`
+- **Authentication**: Uses `monitoring-credentials` secret for InfluxDB.
 
 ## Deployment
 
 This example follows the [Canonical Namespace Handling Strategy](../README.md#canonical-namespace-handling-strategy).
 
-### Prerequisites
+### 1. Manual Deployment (Plain Manifests)
+
+Best for local development and rapid testing.
 
 ```bash
-# Install Flux CLI if not already installed
-brew install fluxcd/tap/flux
+export TARGET_NAMESPACE="monitoring-stack"
 
-# Verify cluster access
-kubectl cluster-info
+# Create Namespace
+kubectl apply -f manifests/namespace.yaml
+
+# Create Credentials
+kubectl apply -f manifests/secrets.yaml
+
+# Deploy the Stack
+kubectl apply -f manifests/influxdb.yaml
+kubectl apply -f manifests/chronograf.yaml
+kubectl apply -f manifests/fluent-bit.yaml
 ```
 
-### Deploy to Edge
+### 2. Flux Deployment (Chronograf only)
+
+This method manages Chronograf as a HelmRelease through Flux.
 
 ```bash
-export ENVIRONMENT="edge"
+export EXAMPLE_NAME="monitoring-stack-flux"
+export TARGET_NAMESPACE="monitoring-stack"
+export APP_PATH="./monitoring-stack/flux/base/sinks"
+export GIT_REPO_URL="https://github.com/orise-infra/examples"
+export GIT_BRANCH="main"
 
-# Build and preview manifests
-kubectl kustomize overlays/$ENVIRONMENT
+# Ensure the native dependencies are running first
+kubectl apply -f manifests/namespace.yaml
+kubectl apply -f manifests/secrets.yaml
+kubectl apply -f manifests/influxdb.yaml
 
-# Apply directly
-kubectl apply -k overlays/$ENVIRONMENT
-
-# Or use Flux (GitOps approach)
-flux create source git monitoring-stack \
-  --url=https://github.com/orise-infra/examples \
-  --branch=main \
+# Create Flux Resources
+flux create source git $EXAMPLE_NAME \
+  --url=$GIT_REPO_URL \
+  --branch=$GIT_BRANCH \
   --namespace=flux-system
 
-flux create kustomization monitoring-stack-$ENVIRONMENT \
-  --source=GitRepository/monitoring-stack \
-  --path="./monitoring-stack/overlays/$ENVIRONMENT" \
+flux create kustomization $EXAMPLE_NAME \
+  --source=GitRepository/$EXAMPLE_NAME \
+  --path=$APP_PATH \
   --prune=true \
   --namespace=flux-system
 ```
-
-### Deploy to Private Cloud
-
-```bash
-export ENVIRONMENT="private-cloud"
-
-# IMPORTANT: Update production secrets before deployment
-# Create secret for InfluxDB admin password
-kubectl create secret generic influxdb-auth \
-  --from-literal=admin-password='YOUR-SECURE-PASSWORD' \
-  --namespace=monitoring-stack
-
-# Apply configuration
-kubectl apply -k overlays/$ENVIRONMENT
-
-# Or with Flux (recommended for private cloud)
-flux create kustomization monitoring-stack-$ENVIRONMENT \
-  --source=GitRepository/monitoring-stack \
-  --path="./monitoring-stack/overlays/$ENVIRONMENT" \
-  --prune=true \
-  --namespace=flux-system
-```
-
-## Configuration Management
-
-### Adding New Values
-
-To add or modify Helm values for a specific environment:
-
-1. Edit the appropriate `values-<component>.yaml` file in the overlay directory
-2. Commit and push changes
-3. Flux will automatically reconcile (if using GitOps)
-
-Example: Increase InfluxDB storage in private cloud:
-
-```bash
-# Edit overlays/private-cloud/values-influxdb.yaml
-persistence:
-  size: 200Gi  # Changed from 100Gi
-```
-
-### Environment-Specific Labels
-
-Each environment automatically gets labeled:
-- **Edge**: `orise.io/environment=edge`
-- **Private Cloud**: `orise.io/environment=private-cloud`, `orise.io/criticality=high`
-
-These labels enable:
-- Resource filtering and monitoring
-- Network policies per environment
-- Cost allocation tracking
 
 ## Verification
 
 ```bash
-# Check the status
-kubectl get all -n monitoring-stack
+# 1. Check the status of all components
+kubectl get all -n $TARGET_NAMESPACE
 
-# Check Flux reconciliation (if using GitOps)
-flux get kustomizations monitoring-stack-$ENVIRONMENT
+# 2. Check the Flux kustomization (if using Flux)
+flux get kustomizations $EXAMPLE_NAME -n flux-system
 
-# Check HelmRelease status
-flux get helmreleases -n monitoring-stack
-
-# Check ConfigMaps (generated from values files)
-kubectl get configmaps -n monitoring-stack
-
-# View logs
-kubectl logs -n monitoring-stack -l app.kubernetes.io/name=influxdb
-kubectl logs -n monitoring-stack -l app.kubernetes.io/name=chronograf
-kubectl logs -n monitoring-stack -l app.kubernetes.io/name=fluent-bit
+# 3. Access Chronograf
+kubectl port-forward svc/chronograf 8888:8888 -n $TARGET_NAMESPACE
 ```
 
-## Testing Values
+## Querying Data
 
-Preview what will be applied before deployment:
+Once in Chronograf (`http://localhost:8888`), use these InfluxQL queries:
 
-```bash
-# Preview edge environment
-kubectl kustomize overlays/edge
-
-# Preview private cloud environment
-kubectl kustomize overlays/private-cloud
-
-# Compare differences between environments
-diff <(kubectl kustomize overlays/edge) <(kubectl kustomize overlays/private-cloud)
-```
-
-## Rollback
-
-### Using Flux (GitOps)
-
-```bash
-# Revert git commit
-git revert <commit-hash>
-git push origin main
-
-# Or force sync to previous revision
-flux reconcile kustomization monitoring-stack-$ENVIRONMENT --with-source
-```
-
-### Manual Rollback
-
-```bash
-# Get previous HelmRelease revision
-flux get helmreleases -n monitoring-stack
-
-# Rollback specific release
-helm rollback influxdb <revision> -n monitoring-stack
-```
+- **Logs**: `SELECT "time", "kubernetes_pod_name", "log" FROM "fluentbit"."autogen"."kube_logs" WHERE "log" != '' ORDER BY time DESC LIMIT 50`
+- **CPU**: `SELECT mean("cpu_p") FROM "fluentbit"."autogen"."cpu.local" WHERE time > now() - 15m GROUP BY time(10s) fill(null)`
+- **Mem**: `SELECT mean("Mem.used") FROM "fluentbit"."autogen"."mem.local" WHERE time > now() - 15m GROUP BY time(10s) fill(null)`
 
 ## Cleanup
 
 ```bash
-# Remove specific environment
-kubectl delete -k overlays/$ENVIRONMENT
+# For Flux deployment
+flux delete kustomization $EXAMPLE_NAME -n flux-system
+flux delete source git $EXAMPLE_NAME -n flux-system
 
-# Or with Flux
-flux delete kustomization monitoring-stack-$ENVIRONMENT
-
-# Remove namespace (removes everything)
-kubectl delete namespace monitoring-stack
+# For Manual deployment
+kubectl delete -f manifests/
 ```
-
-## Private Cloud Considerations
-
-### Security
-
-1. **Secrets Management**: Replace plaintext passwords with Sealed Secrets or external secret stores
-   ```bash
-   # Use sealed-secrets or external-secrets operator
-   kubectl create secret generic influxdb-auth \
-     --from-literal=admin-password='...' \
-     --dry-run=client -o yaml | \
-     kubeseal -o yaml > overlays/private-cloud/influxdb-sealed-secret.yaml
-   ```
-
-2. **Network Policies**: Restrict traffic between components
-   ```bash
-   # Add network policies to overlays/private-cloud/
-   ```
-
-3. **RBAC**: Implement least-privilege access
-
-### High Availability
-
-- Private cloud uses 3 Chronograf replicas
-- Consider StatefulSet for InfluxDB clustering
-- Use pod anti-affinity for distribution
-
-### Monitoring
-
-Private cloud includes Prometheus annotations:
-```yaml
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8086"
-```
-
-### Backup & Recovery
-
-Implement InfluxDB backup strategy:
-```bash
-# Backup script (add to CronJob)
-kubectl exec -n monitoring-stack influxdb-0 -- \
-  influxd backup -portable /backup/$(date +%Y%m%d)
-```
-
-## Migration from Old Structure
-
-If migrating from the old flat structure:
-
-```bash
-# Old structure had everything in root with inline values
-# New structure uses base + overlays with separate values files
-
-# Choose your target environment and deploy
-kubectl apply -k overlays/edge
-```
-
-## See Also
-
-- [Kustomize Documentation](https://kustomize.io/)
-- [Flux Multi-Environment Setup](https://fluxcd.io/docs/guides/repository-structure/)
-- [InfluxDB Helm Chart](https://github.com/influxdata/helm-charts)
-

@@ -4,4 +4,4 @@ metadata:
   name: monitoring-stack
   labels:
     orise.io/tenant: common
-    orise.io/environment: edge
+    orise.io/environment: dev
