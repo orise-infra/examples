@@ -61,7 +61,6 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       # STORAGE: Use 'standard' (local-path provisioner) to consume disk directly on the node.
       # Avoids the overhead of a distributed storage engine (like Longhorn) for single-node deployments.
-      storageClassName: "standard"
       resources:
         requests:
           storage: 10Gi

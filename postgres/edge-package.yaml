@@ -6,5 +6,5 @@ device_types:
 git_bundle:
   repo: orise-infra/examples
   source_repo_path: ../
-  tag: v0.0.3
+  tag: v0.0.4
   flux_path: postgres/edge
