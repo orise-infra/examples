@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: postgres-edge
-  labels:
-    orise.io/tenant: common
-    orise.io/environment: edge

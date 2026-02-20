@@ -1,0 +1,15 @@
+deployment_name: nginx
+device_types:
+  - ipc-x86-64
+  - vm-x86-64
+
+images:
+  archive: ./artifacts/images-linux-amd64.tgz
+  registry: localhost:5000
+  insecure: true
+
+git_bundle:
+  repo: orise-infra/examples
+  source_repo_path: ../
+  tag: v0.0.5
+  flux_path: nginx/edge
